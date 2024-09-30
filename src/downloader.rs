@@ -9,6 +9,8 @@ use tokio::{
 
 const FILE_NAME: &str = if cfg!(target_os = "windows") {
     "yt-dlp.exe"
+} else if cfg!(target_os = "macos") {
+    "yt-dlp_macos"
 } else {
     "yt-dlp"
 };
