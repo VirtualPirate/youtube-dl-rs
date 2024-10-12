@@ -97,9 +97,12 @@ impl YoutubeDlFetcher {
     }
 
     /// Fetches the latest release from the GitHub API, then downloads the binary
-    /// to the specified destination. `destination` can either be a directory, in which case
-    /// the executable is downloaded to that directory, or a file, in which case the file is created.
-    pub async fn download(&self, destination: impl AsRef<Path>) -> Result<PathBuf, Error> {
+    /// to the specified destination if the local version does not match the latest release.
+    /// `destination` can either be a directory, in which case the executable is downloaded to that directory,
+    /// or a file, in which case the file is created.
+    /// If `force_download` is true, the binary is downloaded regardless of the local version.
+    /// Defaults to `false`.
+    pub async fn download(&self, destination: impl AsRef<Path>, force_download_if_exists: bool) -> Result<PathBuf, Error> {
         let release = self.find_newest_release().await?;
         log::debug!("found release: {} at URL {}", release.tag, release.url);
         let destination = destination.as_ref();
@@ -114,16 +117,43 @@ impl YoutubeDlFetcher {
             destination.join(FILE_NAME)
         };
 
-        let mut file = create_file(&path).await?;
-        let mut response = self
-            .client
-            .get(release.url)
-            .send()
-            .await?
-            .error_for_status()?;
+        let should_download = if !force_download_if_exists {
+            // Check if the existing binary matches the latest release
 
-        while let Some(chunk) = response.chunk().await? {
-            file.write_all(&chunk).await?;
+            match std::process::Command::new(&path)
+                .arg("--version")
+                .output()
+            {
+                Ok(output) => {
+                    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    log::debug!("found release: {} existing version {}", release.tag, version);
+
+                    version != release.tag
+                }
+                Err(_) => {
+                    log::warn!("Failed to execute command. Proceeding with download.");
+                    true
+                }
+            }
+        } else {
+            true
+        };
+
+        if should_download {
+            
+            log::debug!("Downloading the latest {} binary ...", self.repo_name);
+
+            let mut file = create_file(&path).await?;
+            let mut response = self
+                .client
+                .get(release.url)
+                .send()
+                .await?
+                .error_for_status()?;
+
+            while let Some(chunk) = response.chunk().await? {
+                file.write_all(&chunk).await?;
+            }
         }
 
         Ok(path)
@@ -149,8 +179,8 @@ async fn create_file(path: impl AsRef<Path>) -> tokio::io::Result<File> {
 }
 
 /// Downloads the yt-dlp executable to the specified destination.
-pub async fn download_yt_dlp(destination: impl AsRef<Path>) -> Result<PathBuf, Error> {
-    YoutubeDlFetcher::default().download(destination).await
+pub async fn download_yt_dlp(destination: impl AsRef<Path>, force_download_if_exists: bool) -> Result<PathBuf, Error> {
+    YoutubeDlFetcher::default().download(destination, force_download_if_exists).await
 }
 
 #[cfg(test)]
