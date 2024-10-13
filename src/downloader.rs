@@ -25,7 +25,7 @@ struct GithubAsset {
     name: String,
 }
 
-struct NewestRelease {
+pub struct NewestRelease {
     url: String,
     tag: String,
 }
