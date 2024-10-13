@@ -60,7 +60,7 @@ impl YoutubeDlFetcher {
         }
     }
 
-    async fn find_newest_release(&self) -> Result<NewestRelease, Error> {
+    pub async fn find_newest_release(&self) -> Result<NewestRelease, Error> {
         let url = format!(
             "https://api.github.com/repos/{}/{}/releases/latest",
             self.github_org, self.repo_name
