@@ -25,7 +25,7 @@ struct GithubAsset {
     name: String,
 }
 
-struct NewestRelease {
+pub struct NewestRelease {
     url: String,
     tag: String,
 }
@@ -102,7 +102,11 @@ impl YoutubeDlFetcher {
     /// or a file, in which case the file is created.
     /// If `force_download` is true, the binary is downloaded regardless of the local version.
     /// Defaults to `false`.
-    pub async fn download(&self, destination: impl AsRef<Path>, force_download_if_exists: bool) -> Result<PathBuf, Error> {
+    pub async fn download(
+        &self,
+        destination: impl AsRef<Path>,
+        force_download_if_exists: bool,
+    ) -> Result<PathBuf, Error> {
         let release = self.find_newest_release().await?;
         log::debug!("found release: {} at URL {}", release.tag, release.url);
         let destination = destination.as_ref();
@@ -120,13 +124,14 @@ impl YoutubeDlFetcher {
         let should_download = if !force_download_if_exists {
             // Check if the existing binary matches the latest release
 
-            match std::process::Command::new(&path)
-                .arg("--version")
-                .output()
-            {
+            match std::process::Command::new(&path).arg("--version").output() {
                 Ok(output) => {
                     let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                    log::debug!("found release: {} existing version {}", release.tag, version);
+                    log::debug!(
+                        "found release: {} existing version {}",
+                        release.tag,
+                        version
+                    );
 
                     version != release.tag
                 }
@@ -140,7 +145,6 @@ impl YoutubeDlFetcher {
         };
 
         if should_download {
-            
             log::debug!("Downloading the latest {} binary ...", self.repo_name);
 
             let mut file = create_file(&path).await?;
@@ -179,8 +183,13 @@ async fn create_file(path: impl AsRef<Path>) -> tokio::io::Result<File> {
 }
 
 /// Downloads the yt-dlp executable to the specified destination.
-pub async fn download_yt_dlp(destination: impl AsRef<Path>, force_download_if_exists: bool) -> Result<PathBuf, Error> {
-    YoutubeDlFetcher::default().download(destination, force_download_if_exists).await
+pub async fn download_yt_dlp(
+    destination: impl AsRef<Path>,
+    force_download_if_exists: bool,
+) -> Result<PathBuf, Error> {
+    YoutubeDlFetcher::default()
+        .download(destination, force_download_if_exists)
+        .await
 }
 
 #[cfg(test)]
