@@ -7,11 +7,17 @@ use tokio::{
     io::AsyncWriteExt,
 };
 
-const FILE_NAME: &str = if cfg!(target_os = "windows") {
-    "yt-dlp.exe"
-} else {
-    "yt-dlp"
-};
+#[cfg(target_os = "macos")]
+const FILE_NAME: &str = "yt-dlp_macos";
+
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+const FILE_NAME: &str = "yt-dlp_linux_aarch64";
+
+#[cfg(all(target_os = "linux", not(target_arch = "aarch64")))]
+const FILE_NAME: &str = "yt-dlp_linux";
+
+#[cfg(target_os = "windows")]
+const FILE_NAME: &str = "yt-dlp.exe";
 
 #[derive(Deserialize, Debug)]
 struct GithubRelease {
@@ -25,7 +31,7 @@ struct GithubAsset {
     name: String,
 }
 
-struct NewestRelease {
+pub struct NewestRelease {
     url: String,
     tag: String,
 }
@@ -60,7 +66,7 @@ impl YoutubeDlFetcher {
         }
     }
 
-    async fn find_newest_release(&self) -> Result<NewestRelease, Error> {
+    pub async fn find_newest_release(&self) -> Result<NewestRelease, Error> {
         let url = format!(
             "https://api.github.com/repos/{}/{}/releases/latest",
             self.github_org, self.repo_name
