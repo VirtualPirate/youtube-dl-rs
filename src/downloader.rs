@@ -32,8 +32,8 @@ struct GithubAsset {
 }
 
 pub struct NewestRelease {
-    url: String,
-    tag: String,
+    pub url: String,
+    pub tag: String,
 }
 
 /// Handles downloading of the youtube-dl/yt-dlp binary from GitHub.
